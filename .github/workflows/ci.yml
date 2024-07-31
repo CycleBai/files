@@ -1,0 +1,53 @@
+name: Generate Changelog
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  changelog:
+    runs-on: ubuntu-latest
+    name: Generate and Commit Changelog
+
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+
+    - name: Generate Changelog
+      uses: smichard/conventional_changelog@2.0.0
+      with:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Set Git User Info
+      run: |
+        git config user.name 'GitHub Actions Bot'
+        git config user.email 'actions@github.com'
+
+    - run: |
+        sudo chmod -R ugo+rwX . 
+
+    - name: Commit Changelog
+      run: |
+        git add CHANGELOG.md
+        git commit -m "docs: :robot: changelog file generated" || echo "No changes to commit"
+        git push
+
+  add-comment:
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+      
+      - name: Get all commits on this push
+        id: get_commits
+        run: |
+            # 获取所有提交的日志
+            commits=$(git log --format="%H %s" ${{ github.event.before }}..${{ github.sha }})
+            echo "$commits"
+
+            # 将提交信息设置为输出
+            echo "::set-output name=commits::$commits"
